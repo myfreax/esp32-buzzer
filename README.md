@@ -16,3 +16,5 @@ void app_main(void) {
   buzzer_once(100 * 1000);
 }
 ```
+## Example
+The [ESP32 Example Project](https://github.com/myfreax/esp32-example-project) demonstrates how to use IDF framework build application of reusable component
