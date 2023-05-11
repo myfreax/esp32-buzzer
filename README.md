@@ -6,7 +6,7 @@ Components Used To Drive Passive Electromagnetic Buzzer
 
 ## Usage
 ```
-git submodule add git@github.com:myfreax/esp32-buzzer.git
+git submodule add git@github.com:myfreax/esp32-buzzer.git components/buzzer
 ```
 ```c
 #include "buzzer.h"
