@@ -1,3 +1,5 @@
+#include "buzzer.h"
+
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "timer.h"
@@ -6,7 +8,7 @@ esp_err_t buzzer_config(int buzzer_pin) {
   ledc_timer_config_t timer = {.speed_mode = LEDC_LOW_SPEED_MODE,
                                .timer_num = LEDC_TIMER_0,
                                .duty_resolution = LEDC_TIMER_10_BIT,
-                               .freq_hz = 5000,
+                               .freq_hz = 2700,
                                .clk_cfg = LEDC_AUTO_CLK};
   esp_err_t timer_err = ledc_timer_config(&timer);
 
@@ -41,7 +43,7 @@ esp_err_t buzzer_once(uint64_t time_us) {
   static esp_timer_handle_t handle;
   void callback(void* arg) {
     esp_timer_handle_t* timer = arg;
-    ESP_ERROR_CHECK(ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 20));
+    ESP_ERROR_CHECK(ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 50));
     ESP_ERROR_CHECK(esp_timer_delete(*timer));
   }
 
