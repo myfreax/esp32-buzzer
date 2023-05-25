@@ -1,8 +1,9 @@
-#include "buzzer.h"
-
 #include "driver/ledc.h"
 #include "esp_err.h"
+#include "esp_log.h"
 #include "timer.h"
+
+static const char* TAG = "BUZZER";
 
 esp_err_t buzzer_config(int buzzer_pin) {
   ledc_timer_config_t timer = {.speed_mode = LEDC_LOW_SPEED_MODE,
@@ -44,7 +45,10 @@ esp_err_t buzzer_once(uint64_t time_us) {
   void callback(void* arg) {
     esp_timer_handle_t* timer = arg;
     ESP_ERROR_CHECK(ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 50));
-    ESP_ERROR_CHECK(esp_timer_delete(*timer));
+    esp_err_t err = esp_timer_delete(*timer);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Timer Delete Failed: %s", esp_err_to_name(err));
+    }
   }
 
   ESP_ERROR_CHECK(
