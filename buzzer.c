@@ -27,9 +27,10 @@ esp_err_t buzzer_config(int buzzer_pin) {
   return ledc_channel_config(&channel);
 }
 
-esp_err_t buzzer_once(uint64_t time_us) {
+esp_err_t buzzer_once(uint64_t time_us, unsigned char percentage) {
   esp_err_t ledc_set_duty_err = ledc_set_duty(
-      LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << LEDC_TIMER_10_BIT) / 2);
+      LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0,
+      (unsigned int)(((1 << LEDC_TIMER_13_BIT) - 1) * (percentage / 100.f)));
   if (ledc_set_duty_err != ESP_OK) {
     return ledc_set_duty_err;
   }
