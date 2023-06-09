@@ -1,3 +1,5 @@
+#include "buzzer.h"
+
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -27,10 +29,10 @@ esp_err_t buzzer_config(int buzzer_pin) {
   return ledc_channel_config(&channel);
 }
 
-esp_err_t buzzer_once(uint64_t time_us, unsigned char percentage) {
+esp_err_t buzzer_once(uint64_t time_us, uint8_t percentage) {
   esp_err_t ledc_set_duty_err = ledc_set_duty(
       LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0,
-      (unsigned int)(((1 << LEDC_TIMER_10_BIT) - 1) * (percentage / 100.f)));
+      (uint32_t)(((1 << LEDC_TIMER_10_BIT) - 1) * (percentage / 100.f)));
   if (ledc_set_duty_err != ESP_OK) {
     return ledc_set_duty_err;
   }
@@ -55,4 +57,33 @@ esp_err_t buzzer_once(uint64_t time_us, unsigned char percentage) {
   ESP_ERROR_CHECK(
       set_timeout("buzzer_once", callback, &handle, &handle, time_us));
   return ESP_OK;
+}
+
+static void alarm_task(void* arg) {
+  buzzer_params_t* alarm = arg;
+  while (1) {
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0,
+                                  (uint32_t)(((1 << LEDC_TIMER_10_BIT) - 1) *
+                                             (alarm->percentage / 100.f))));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+    vTaskDelay(alarm->interval_time / portTICK_PERIOD_MS);
+    ESP_ERROR_CHECK(ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 50));
+    vTaskDelay(alarm->interval_time / portTICK_PERIOD_MS);
+  }
+}
+
+buzzer_params_t* buzzer_alarm(uint64_t interval_time_ms, uint8_t percentage) {
+  TaskHandle_t xtask_id;
+  buzzer_params_t* alarm = malloc(sizeof(buzzer_params_t));
+  alarm->percentage = percentage;
+  alarm->interval_time = interval_time_ms;
+  xTaskCreate(&alarm_task, "alarm_task", 2048, alarm, 10, &xtask_id);
+  alarm->xtask_id = xtask_id;
+  return alarm;
+}
+
+esp_err_t buzzer_close(buzzer_params_t* alarm) {
+  vTaskDelete(alarm->xtask_id);
+  free(alarm);
+  return ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 50);
 }
