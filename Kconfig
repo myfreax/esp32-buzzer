@@ -1,4 +1,4 @@
-menu "i2C"
+menu "Buzzer"
   orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
   config BUZZER_PIN
     int "Buzzer Pin"
