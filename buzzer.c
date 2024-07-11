@@ -63,9 +63,10 @@ static void alarm_task(void* arg) {
  * @param duration buzzer beep duration uint: ms
  * @param interval time(ms) interval between beeps
  * @param percentage 0-100 sound volume
- * @param timeout After how many milliseconds to close. If it is 0, it will
+ * @param timeout After how many seconds to close. If it is 0, it will
  * continue until you manually close it.
- * @param arg
+ * @param arg it will be pass to callback
+ * @param callback callback function
  * @note When using automatic shutdown, you need to free buzzer_alarm_t
  */
 buzzer_alarm_t* buzzer_alarm(uint64_t duration, uint64_t interval,
@@ -85,9 +86,11 @@ buzzer_alarm_t* buzzer_alarm(uint64_t duration, uint64_t interval,
 
 esp_err_t buzzer_close(buzzer_alarm_t* alarm) {
   eTaskState state = eTaskGetState(alarm->task_handle);
+  ESP_LOGI(TAG, "alarm task state: %d", state);
   if (state < 4) {
     vTaskDelete(alarm->task_handle);
   }
+  ESP_LOGI(TAG, "free alarm task params pointer");
   free(alarm);
   return pwm_stop(LEDC_CHANNEL_7);
 }
