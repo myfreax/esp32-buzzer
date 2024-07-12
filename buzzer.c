@@ -41,15 +41,14 @@ esp_err_t buzzer_beep(uint64_t duration, uint8_t percentage) {
 
 static void alarm_task(void* arg) {
   buzzer_alarm_t* alarm = (buzzer_alarm_t*)arg;
-  int64_t start = time_current_us();
 
   while (1) {
-    if (alarm->timeout != 0 &&
-        time_current_us() - start > alarm->timeout * 1000 * 1000) {
+    if (alarm->end != 0 &&
+        time_current_us() - alarm->start > alarm->end * 1000 * 1000) {
       if (alarm->callback != NULL) {
-        alarm->callback(alarm->arg);
+        alarm->callback(alarm->callback_arg);
       }
-      vTaskDelete(NULL);
+      vTaskSuspend(NULL);
     }
     pwm_set_duty(LEDC_CHANNEL_7, LEDC_TIMER_10_BIT, alarm->percentage);
     vTaskDelay(alarm->duration / portTICK_PERIOD_MS);
@@ -58,39 +57,28 @@ static void alarm_task(void* arg) {
   }
 }
 
-/**
- * @brief
- * @param duration buzzer beep duration uint: ms
- * @param interval time(ms) interval between beeps
- * @param percentage 0-100 sound volume
- * @param timeout After how many seconds to close. If it is 0, it will
- * continue until you manually close it.
- * @param arg it will be pass to callback
- * @param callback callback function
- * @note When using automatic shutdown, you need to free buzzer_alarm_t
- */
-buzzer_alarm_t* buzzer_alarm(uint64_t duration, uint64_t interval,
-                             uint8_t percentage, uint64_t timeout, void* arg,
-                             buzzer_alarm_callback callback) {
-  buzzer_alarm_t* alarm = malloc(sizeof(buzzer_alarm_t));
-  alarm->duration = duration;
-  alarm->percentage = percentage;
-  alarm->interval = interval;
-  alarm->arg = arg;
-  alarm->callback = callback;
-  alarm->task_handle = NULL;
-  alarm->timeout = timeout;
-  xTaskCreate(alarm_task, "alarm_task", 2048, alarm, 10, &alarm->task_handle);
-  return alarm;
+void buzzer_alarm(buzzer_alarm_t* alarm) {
+  if (alarm->task_handle == NULL) {
+    alarm->start = time_current_us();
+    xTaskCreate(alarm_task, "alarm_task", 2048, alarm, 10, &alarm->task_handle);
+  } else {
+    eTaskState state = eTaskGetState(alarm->task_handle);
+    if (state == eSuspended) {
+      alarm->start = time_current_us();
+      vTaskResume(alarm->task_handle);
+    }
+  }
 }
 
+/**
+ * @note The function can't delete state is 1 of task
+ */
 esp_err_t buzzer_close(buzzer_alarm_t* alarm) {
   eTaskState state = eTaskGetState(alarm->task_handle);
   ESP_LOGI(TAG, "alarm task state: %d", state);
-  if (state < 4) {
+  if (state > 1 && state < 4) {
     vTaskDelete(alarm->task_handle);
   }
-  ESP_LOGI(TAG, "free alarm task params pointer");
   free(alarm);
   return pwm_stop(LEDC_CHANNEL_7);
 }
